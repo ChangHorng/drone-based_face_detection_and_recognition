@@ -43,24 +43,24 @@ for i in ['train', 'valid']:
     MetadataCatalog.get('person_faces_' + i + '_dataset').set(thing_classes=classes)
 
 cfg = get_cfg()
-# cfg.merge_from_file(model_zoo.get_config_file('COCO-Detection/faster_rcnn_R_50_FPN_3x.yaml'))
-cfg.merge_from_file(model_zoo.get_config_file('COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml'))
+cfg.merge_from_file(model_zoo.get_config_file('COCO-Detection/faster_rcnn_R_50_FPN_3x.yaml'))
+# cfg.merge_from_file(model_zoo.get_config_file('COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml'))
 
-cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url('COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml')
+cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url('COCO-Detection/faster_rcnn_R_50_FPN_3x.yaml')
 cfg.DATASETS.TRAIN = ('droneFace_train_dataset', 'person_faces_train_dataset')
 cfg.DATASETS.TEST = ('droneFace_valid_dataset', 'person_faces_valid_dataset')
 
 cfg.DATALOADER.NUM_WORKERS = 1
 cfg.SOLVER.BASE_LR = 0.0005
-cfg.SOLVER.WARMUP_ITERS = 2075
+cfg.SOLVER.WARMUP_ITERS = 1040
 # Images = 4150
-cfg.SOLVER.IMS_PER_BATCH = 4
-cfg.SOLVER.MAX_ITER = 20750
-cfg.SOLVER.STEPS = [8300, 9337, 10374, 11411, 12448, 13485, 14522, 15559, 16596, 17633]
-cfg.SOLVER.GAMMA = 0.6
+cfg.SOLVER.IMS_PER_BATCH = 2
+cfg.SOLVER.MAX_ITER = 10400
+cfg.SOLVER.STEPS = [5200]
+cfg.SOLVER.GAMMA = 0.05
 cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 128
 cfg.MODEL.ROI_HEADS.NUM_CLASSES = len(classes)
-cfg.TEST.EVAL_PERIOD = 4150
+cfg.TEST.EVAL_PERIOD = 1000
 # cfg.MODEL.DEVICE = 'cpu'
 
 os.makedirs(cfg.OUTPUT_DIR, exist_ok=True)
