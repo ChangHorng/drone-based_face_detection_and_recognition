@@ -58,7 +58,7 @@ for i in ['train', 'valid']:
         '../person_faces_dataset/' + i))
     MetadataCatalog.get('person_faces_' + i + '_dataset').set(thing_classes=classes)
 
-# Initialize settings for config setting
+# Initialize settings for training
 cfg = get_cfg()
 
 # Here we are using COCO Instance Segmentation Baselines with Mask R-CNN (R50-FPN) pre-trained model from Detectron2
