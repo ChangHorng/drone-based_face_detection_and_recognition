@@ -1,42 +1,43 @@
 from djitellopy import tello
+
 import keyboard as kp
-from time import sleep
+
+
+def get_keyboard_input():
+    # Initialise the displacement of the drone in all directions to 0
+    lr, fb, ud, yv = 0, 0, 0, 0
+    speed = 50
+
+    # Updates the displacement of drone in the direction respective to the key press
+    if kp.get_key("LEFT"):
+        lr = -speed
+    elif kp.get_key("RIGHT"):
+        lr = speed
+    if kp.get_key("UP"):
+        fb = speed
+    elif kp.get_key("DOWN"):
+        fb = -speed
+    if kp.get_key("w"):
+        ud = speed
+    elif kp.get_key("s"):
+        ud = -speed
+    if kp.get_key("a"):
+        yv = -speed
+    elif kp.get_key("d"):
+        yv = speed
+    if kp.get_key("e"):
+        me.takeoff()
+    if kp.get_key("q"):
+        me.land()
+
+    return [lr, fb, ud, yv]
 
 
 kp.init()
 me = tello.Tello()
 me.connect()
-print(me.get_battery())
 
-
-def getKeyboardInput():
-    lr, fb, ud, yv = 0, 0, 0, 0
-    speed = 50
-    if kp.getKey("LEFT"):
-        lr = -speed
-    elif kp.getKey("RIGHT"):
-        lr = speed
-    if kp.getKey("UP"):
-        fb = speed
-    elif kp.getKey("DOWN"):
-        fb = -speed
-    if kp.getKey("w"):
-        ud = speed
-    elif kp.getKey("s"):
-        ud = -speed
-    if kp.getKey("a"):
-        yv = -speed
-    elif kp.getKey("d"):
-        yv = speed
-    if kp.getKey("q"):
-        me.land()
-        sleep(3)
-    if kp.getKey("e"):
-        me.takeoff()
-    return [lr, fb, ud, yv]
-
-
+# Keep looping to get keyboard input from user
 while True:
-    vals = getKeyboardInput()
+    vals = get_keyboard_input()
     me.send_rc_control(vals[0], vals[1], vals[2], vals[3])
-    sleep(0.05)
