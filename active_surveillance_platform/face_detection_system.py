@@ -1,3 +1,13 @@
+"""
+In order to execute face detection in real-time smoothly with a higher FPS, we used a PC setup with the following
+specifications.
+
+CPU - AMD Ryzen 5 3600
+GPU - MSI RTX2060 AERO ITX
+RAM - Corsair Vengeance 3200 MHz C16 16GB (2 X 8GB)
+"""
+
+
 import cv2
 import keyboard_control as kp
 import os
