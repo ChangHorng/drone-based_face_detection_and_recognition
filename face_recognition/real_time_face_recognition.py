@@ -1,145 +1,116 @@
+"""
+The images stored in the Face Recognition Dataset folder should be in file formats that are supported by cv2, where
+images with formats such as .HEIC should not be used, so that the program can execute successfully.
+"""
+
+
 import cv2
-import face_recognition
+import face_recognition as fr
 import numpy as np
 import os
 
-from datetime import datetime
-
-# from PIL import ImageGrab
-
-path = 'Attendance'
-images = []
-classNames = []
-myList = os.listdir(path)
-print(myList)
-for cl in myList:
-    curImg = cv2.imread(f'{path}/{cl}')
-    images.append(curImg)
-    classNames.append(os.path.splitext(cl)[0])
-print(classNames)
+from djitellopy import Tello
 
 
-def findEncodings(images):
-    encodeList = []
+def face_recognition_setup(path):
+
+    # Path must be the file path to the image dataset
+    path = path
+    images = []
+    person_names = []
+
+    image_names = os.listdir(path)
+    # Retrieve the names of each person in the dataset
+    for image_name in image_names:
+        current_image = cv2.imread(f'{path}/{image_name}')
+        if current_image is not None:
+            images.append(current_image)
+            person_names.append(os.path.splitext(image_name)[0])
+
+    encoding_list = find_encodings(images)
+
+    return person_names, encoding_list
+
+
+def find_encodings(images):
+    encoding_list = []
+
+    # Iterate through image dataset to get face encodings
     for img in images:
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        encode = face_recognition.face_encodings(img)[0]
-        encodeList.append(encode)
-    return encodeList
+        encode = fr.face_encodings(img)[0]
+        encoding_list.append(encode)
+
+    return encoding_list
 
 
-def markAttendance(name):
-    with open('Attendance.csv', 'r+') as f:
-        myDataList = f.readlines()
-        nameList = []
-        for line in myDataList:
-            entry = line.split(',')
-            nameList.append(entry[0])
-        if name not in nameList:
-            now = datetime.now()
-            dtString = now.strftime('%H:%M:%S')
-            f.writelines(f'\n{name},{dtString}')
+def face_recognition(person_names, encoding_list, frame):
 
+    # Scales down input frame
+    resized_img = cv2.resize(frame, (0, 0), None, 0.25, 0.25)
+    resized_img = cv2.cvtColor(resized_img, cv2.COLOR_BGR2RGB)
 
-#### FOR CAPTURING SCREEN RATHER THAN WEBCAM
-# def captureScreen(bbox=(300,300,690+300,530+300)):
-#     capScr = np.array(ImageGrab.grab(bbox))
-#     capScr = cv2.cvtColor(capScr, cv2.COLOR_RGB2BGR)
-#     return capScr
+    # Detect face in input frame and process the face encoding
+    faces_in_current_frame = fr.face_locations(resized_img, model='vgg')
+    encodings_in_current_frame = fr.face_encodings(resized_img, faces_in_current_frame)
 
-encodeListKnown = findEncodings(images)
-print('Encoding Complete')
+    # Iterate through the faces within our dataset to compare with the face detected in the input frame
+    for face_encoding, face_location in zip(encodings_in_current_frame, faces_in_current_frame):
+        face_distances = fr.face_distance(encoding_list, face_encoding)
+        matched_index = np.argmin(face_distances)
 
-cap = cv2.VideoCapture(0)
-
-while True:
-    success, img = cap.read()
-    # img = captureScreen()
-    imgS = cv2.resize(img, (0, 0), None, 0.25, 0.25)
-    imgS = cv2.cvtColor(imgS, cv2.COLOR_BGR2RGB)
-
-    facesCurFrame = face_recognition.face_locations(imgS, model="vgg")
-    encodesCurFrame = face_recognition.face_encodings(imgS, facesCurFrame)
-
-    for encodeFace, faceLoc in zip(encodesCurFrame, facesCurFrame):
-        matches = face_recognition.compare_faces(encodeListKnown, encodeFace)
-        faceDis = face_recognition.face_distance(encodeListKnown, encodeFace)
-        # print(faceDis)
-        matchIndex = np.argmin(faceDis)
-
-        # if matches[matchIndex]:
-        #     name = classNames[matchIndex].upper()
-        # # print(name)
-        if faceDis[matchIndex] < 0.50:
-            name = classNames[matchIndex].upper()
-            markAttendance(name)
+        # Assign name to recognised face, else assign 'Unknown'
+        if face_distances[matched_index] < 0.50:
+            name = person_names[matched_index].upper()
         else:
             name = 'Unknown'
-        # print(name)
-        y1, x2, y2, x1 = faceLoc
-        y1, x2, y2, x1 = y1 * 4, x2 * 4, y2 * 4, x1 * 4
-        cv2.rectangle(img, (x1, y1), (x2, y2), (0, 255, 0), 2)
-        cv2.rectangle(img, (x1, y2 - 35), (x2, y2), (0, 255, 0), cv2.FILLED)
-        cv2.putText(img, name, (x1 + 6, y2 - 6), cv2.FONT_HERSHEY_COMPLEX, 1, (255, 255, 255), 2)
-        y1, x2, y2, x1 = faceLoc
-        y1, x2, y2, x1 = y1 * 4, x2 * 4, y2 * 4, x1 * 4
-        cv2.rectangle(img, (x1, y1), (x2, y2), (0, 255, 0), 2)
-        cv2.rectangle(img, (x1, y2 - 35), (x2, y2), (0, 255, 0), cv2.FILLED)
-        cv2.putText(img, name, (x1 + 6, y2 - 6), cv2.FONT_HERSHEY_COMPLEX, 1, (255, 255, 255), 2)
-        markAttendance(name)
 
-    cv2.imshow('Webcam', img)
-    cv2.waitKey(1)
+        # Annotate the rectangle box on the faces recognised with their respective names
+        y1, x2, y2, x1 = face_location
+        y1, x2, y2, x1 = y1 * 4, x2 * 4, y2 * 4, x1 * 4                         # Rescale image back to original size
+        cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+        cv2.rectangle(frame, (x1, y2 - 35), (x2, y2), (0, 255, 0), cv2.FILLED)
+        cv2.putText(frame, name, (x1 + 6, y2 - 6), cv2.FONT_HERSHEY_COMPLEX, 1, (255, 255, 255), 2)
 
-    # a face from multiple sides
-#  Can we store image encodings somewhere so that we don't need to calculate it every time. Let say I have 20 images of me (used to achieve accuracy) and total around 100+ images in that folder. To find encoding of 100 images again and again will increase the time complexity of the program.
-#  just split the code into 2 py file at 1st file get the encode data and save it in a CSV file as array. in 2nd file just load the encoded data from that CSV file and do the recognition.
-# https://medium.com/@ageitgey/machine-learning-is-fun-part-4-modern-face-recognition-with-deep-learning-c3cffc121d78
-# https://gist.github.com/ageitgey/1c1cb1c60ace321868f7410d48c228e1
-# https://github.com/ageitgey/face_recognition/blob/master/README.rst#
 
-'''
-Sure! Here are some pros and cons of each of the face recognition models mentioned earlier:
+def get_frame(drone, width, height):
 
-1. CNN:
-Pros:
-- Provides good accuracy for face recognition
-- Faster and less computationally intensive compared to some other deep learning models like VGG-Face
-- Works well with lower resolution images
+    # Retrieve and resize frame from Tello EDU drone's camera
+    img = drone.get_frame_read().frame
+    img_resize = cv2.resize(img, (width, height))
 
-Cons:
-- May not be as accurate as some other deep learning models, particularly on larger and more complex datasets
-- May struggle with recognizing faces in varying lighting conditions or with occlusions
+    return img_resize
 
-2. VGG-Face:
-Pros:
-- Has achieved high accuracy in several face recognition benchmarks
-- Can recognize faces with a high degree of variability, such as pose and expression changes
-- Robust to occlusions
 
-Cons:
-- Large and computationally intensive model that requires significant computational resources
-- May not be suitable for real-time face recognition applications due to its high computational requirements
+if __name__ == "__main__":
 
-3. ResNet:
-Pros:
-- Can achieve high accuracy in face recognition tasks
-- Can learn to recognize complex features from images
-- Relatively faster and less computationally intensive compared to VGG-Face
+    # Initialize data required for face recognition
+    person_names, encoding_list = face_recognition_setup('Face Recognition Dataset')
 
-Cons:
-- May require a larger amount of training data to achieve high accuracy compared to other models
-- May be sensitive to overfitting if not trained properly
+    # Set the output window to a specific width and height
+    width, height = 640, 480
 
-4. Inception:
-Pros:
-- Can achieve high accuracy in face recognition tasks
-- Efficient architecture that uses multiple filters of different sizes in the same layer
-- Can learn to recognize complex features from images
+    # Create Tello object and connect device with Tello EDU drone
+    tello = Tello()
+    tello.connect()
 
-Cons:
-- May require a larger amount of training data to achieve high accuracy compared to other models
-- May be sensitive to overfitting if not trained properly
+    # Switch on the camera of Tello EDU drone
+    tello.streamon()
 
-Overall, the choice of a face recognition model depends on several factors such as accuracy requirements, computational resources, and real-time processing requirements.
-'''
+    exit = 0
+    while not exit:
+        # Keep getting frame from Tello EDU drone's camera
+        frame = get_frame(tello, width, height)
+        # Process the frame with in-built face recognition library
+        face_recognition(person_names, encoding_list, frame)
+
+        # Show the output frame using cv2
+        cv2.imshow("Real-time Face Recognition", frame)
+
+        # User can terminate the program by pressing on key 'Q'
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+
+    # Switch off the camera of Tello EDU drone and disconnect with device
+    tello.streamoff()
+    tello.end()
