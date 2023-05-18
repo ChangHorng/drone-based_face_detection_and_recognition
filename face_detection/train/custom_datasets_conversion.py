@@ -40,8 +40,6 @@ def create_annotations_data_frame(json_file_path, class_name):
     # Convert the list of dictionaries into a DataFrame object
     data_frame = pd.DataFrame(dataset)
 
-    # data_frame.to_csv(csv_filename, header=True, index=None)
-
     unique_files = data_frame.file_name.unique()
 
     return data_frame[data_frame.file_name.isin(unique_files)]
