@@ -145,6 +145,7 @@ if __name__ == "__main__":
     # Set the output window to a specific width and height
     width, height = 640, 480
     takeoff = False
+    landed = True
     open_cam = False
     fbRange = [100000, 300000]
 
@@ -166,10 +167,17 @@ if __name__ == "__main__":
             if takeoff is False:
                 tello.takeoff()
                 takeoff = True
+                landed = False
             else:
                 print("Already take off!")
         elif vals[4] is False:
-            tello.land()
+            if landed is False:
+                tello.land()
+                landed = True
+            else:
+                # reset the value to keep system running
+                vals[4] = True
+                print('Drone has not taken off!')
 
         # Check if user has given input for drone's camera to start or end streaming
         if vals[5] is True:
